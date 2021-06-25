@@ -1,0 +1,66 @@
+# vcs-trigger.yaml
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: vcs-trigger-metrics-app-template
+spec:
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: metrics-app-pipeline-run-
+      spec:
+        pipelineRef:
+          name: metrics-app-pipeline
+        serviceAccountName: build-bot
+        params:
+          - name: source-repo
+            value: https://github.com/glauco74/metrics-app
+          - name: image-repo
+            value: quay.io/glauco74/metrics
+        workspaces:
+          - name: pfs-shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: vcs-trigger-metrics-app-binding
+spec:
+  params:
+    - name: namespace
+      value: glauco-cenciotti-pfs
+    - name: gitrepositoryurl
+      value: $(body.repository.url)
+    - name: gitrepositoryname
+      value: $(body.repository.name)
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: vcs-metrics-app-trigger-el
+spec:
+  serviceAccountName: vcs-trigger
+  triggers:
+    - bindings:
+        - ref: vcs-trigger-metrics-app-binding
+      template:
+        name: vcs-trigger-metrics-app-template
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: vcs-trigger-metrics-app-el-route
+spec:
+  port:
+    targetPort: 8080
+  to:
+    kind: Service
+    name: el-vcs-trigger-metrics-app-el
+    weight: 100

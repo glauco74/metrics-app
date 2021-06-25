@@ -1,0 +1,23 @@
+# pipeline-run.yaml
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: metrics-app-pipeline-run-
+spec:
+  pipelineRef:
+    name: pfs-pipeline
+  serviceAccountName: build-bot
+  params:
+    - name: source-repo
+      value: https://github.com/glauco74/metrics-app
+    - name: image-repo
+      value: quay.io/glauco74/metrics
+  workspaces:
+    - name: pfs-shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
